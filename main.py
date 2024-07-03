@@ -1,47 +1,58 @@
 import json
 import os
 
-from src.emulation.customer_decision_maker import CustomerDecisionMaker
-from src.generators.equipment_generator import generate_equipment_table
-from src.emulation.workshop_decision_maker import WorkshopDecisionMaker
-from src.emulation.workshop_emulator import WorkshopEmulator
-
 import pandas as pd
 import sqlalchemy as sa
 from dotenv import load_dotenv
+from pandas import DataFrame
 
+from src.emulation.customer_decision_maker import CustomerDecisionMaker
+from src.emulation.workshop_decision_maker import WorkshopDecisionMaker
+from src.emulation.workshop_emulator import WorkshopEmulator
 from src.emulation.emulation import emulate_day
+from src.generators.equipment_generator import generate_equipment_table
 from src.generators.personal_data_generator import PersonalDataGenerator
 from src.models.base import Base
 
-with open("data/parameters/dates.json") as file:
-    dates = json.load(file)
+def load_json_file(file_path: str) -> (dict | Exception):
+    try:
+        with open(file_path, encoding="utf-8") as file:
+            return json.load(file)
+    except FileNotFoundError:
+        raise FileNotFoundError(f"The file at the specified path: {file_path} \
+                                 was not found. Please check if the path is correct.")
+    except Exception as e:
+        return e
+    
+def load_cvs_file(file_path: str) -> (DataFrame | Exception):
+    try:
+        return pd.read_csv(file_path)
+    except FileNotFoundError:
+        raise FileNotFoundError(f"The file at the specified path: {file_path} \
+                                 was not found. Please check if the path is correct.")
+    except Exception as e:
+        raise e
 
-with open("data/parameters/employees.json", encoding="utf-8") as file:
-    employees_data = json.load(file)
-
-with open("data/parameters/services_parts.json", "r", encoding="utf-8") as file:
-    service_parameters = json.load(file)
-
-names = pd.read_csv("data/names.csv")
-female_surnames = pd.read_csv("data/female_surnames.csv")
-male_surnames = pd.read_csv("data/male_surnames.csv")
-vehicles_info = pd.read_csv("data/brands.csv")
+dates = load_json_file("data/parameters/dates.json")
+employees_data = load_json_file("data/parameters/employees.json")
+service_parameters = load_json_file("data/parameters/services_parts.json")
+names = load_cvs_file("data/names.csv")
+female_surnames = load_cvs_file("data/female_surnames.csv")
+male_surnames = load_cvs_file("data/male_surnames.csv")
+vehicles_info = load_cvs_file("data/brands.csv")
 
 load_dotenv()
 url_object = sa.URL.create(
     drivername="mariadb+mariadbconnector",
-    host="giniewicz.it",
+    host="localhost",
     username=os.getenv("LOGIN"),
     password=os.getenv("PASSWORD"),
     database=os.getenv("BASE"),
 )
 
 conn = sa.create_engine(url_object)
-
 Base.metadata.drop_all(conn)
 Base.metadata.create_all(conn)
-
 Session = sa.orm.sessionmaker(bind=conn)
 session = Session()
 date_range = pd.date_range(dates["start"], periods=365).to_pydatetime()
@@ -112,7 +123,6 @@ customer_decision_maker = CustomerDecisionMaker(
 
 complaints = []
 transactions = []
-
 for day_number, date in enumerate(date_range):
     emulate_day(
         date, workshop_emulators, customer_decision_maker, transactions, day_number
