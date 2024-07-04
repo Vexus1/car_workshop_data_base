@@ -1,0 +1,7 @@
+{
+    "drivername": "mariadb+mariadbconnector",
+    "host": "localhost",
+    "username": "admin",
+    "password": "qwerty",
+    "database": "car_workshop"
+}

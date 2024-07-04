@@ -3,9 +3,10 @@ import os
 
 import pandas as pd
 import sqlalchemy as sa
-from dotenv import load_dotenv
 from pandas import DataFrame
 
+from config_app import run_config_app
+from conn import load_config, create_connection, close_connection
 from src.emulation.customer_decision_maker import CustomerDecisionMaker
 from src.emulation.workshop_decision_maker import WorkshopDecisionMaker
 from src.emulation.workshop_emulator import WorkshopEmulator
@@ -41,16 +42,9 @@ female_surnames = load_cvs_file("data/female_surnames.csv")
 male_surnames = load_cvs_file("data/male_surnames.csv")
 vehicles_info = load_cvs_file("data/brands.csv")
 
-load_dotenv()
-url_object = sa.URL.create(
-    drivername="mariadb+mariadbconnector",
-    host="localhost",
-    username=os.getenv("LOGIN"),
-    password=os.getenv("PASSWORD"),
-    database=os.getenv("BASE"),
-)
-
-conn = sa.create_engine(url_object)
+run_config_app()
+config = load_config()
+conn = create_connection(config)
 Base.metadata.drop_all(conn)
 Base.metadata.create_all(conn)
 Session = sa.orm.sessionmaker(bind=conn)
