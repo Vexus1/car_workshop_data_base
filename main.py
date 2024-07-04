@@ -2,11 +2,12 @@ import json
 import os
 
 import pandas as pd
-import sqlalchemy as sa
 from pandas import DataFrame
+from sqlalchemy import orm
+from datetime import datetime
 
 from config_app import run_config_app
-from conn import load_config, create_connection, close_connection
+from conn import load_config, create_connection
 from src.emulation.customer_decision_maker import CustomerDecisionMaker
 from src.emulation.workshop_decision_maker import WorkshopDecisionMaker
 from src.emulation.workshop_emulator import WorkshopEmulator
@@ -47,10 +48,12 @@ config = load_config()
 conn = create_connection(config)
 Base.metadata.drop_all(conn)
 Base.metadata.create_all(conn)
-Session = sa.orm.sessionmaker(bind=conn)
-session = Session()
-date_range = pd.date_range(dates["start"], periods=365).to_pydatetime()
-date_range = [d for d in date_range if d.weekday() < 5]
+session = orm.sessionmaker(bind=conn)()
+
+def create_date_range() -> list[datetime]:
+    _date_range = pd.date_range(dates["start"], periods=365).to_pydatetime()
+    _date_range = [d for d in _date_range if d.weekday() < 5]
+    return _date_range
 
 equipment = generate_equipment_table(service_parameters=service_parameters)
 personal_data_generator = PersonalDataGenerator(
@@ -74,6 +77,7 @@ workshop_decision_maker1 = WorkshopDecisionMaker(
     stock_replenishment_fraction=3,
 )
 
+date_range = create_date_range()
 workshop_emulator1 = WorkshopEmulator(
     date=date_range[0],
     decision_maker=workshop_decision_maker1,
@@ -119,7 +123,8 @@ complaints = []
 transactions = []
 for day_number, date in enumerate(date_range):
     emulate_day(
-        date, workshop_emulators, customer_decision_maker, transactions, day_number
+        date, workshop_emulators,
+        customer_decision_maker, transactions, day_number
     )
 
 workshops = [wdm.workshop for wdm in workshop_emulators]

@@ -18,8 +18,3 @@ def create_connection(config: dict) -> sa.Engine:
     )
     engine = sa.create_engine(url_object)
     return engine
-
-def close_connection(conn: sa.Engine) -> None:
-    if conn:
-        conn.dispose()
-        print("Połączenie z bazą danych zostało zamknięte.")
